@@ -1,27 +1,35 @@
 package pebloop.zoocraft.blocks
 
-import net.minecraft.block.Block
-import net.minecraft.block.BlockState
-import net.minecraft.block.FenceBlock
-import net.minecraft.block.ShapeContext
+import com.mojang.serialization.MapCodec
+import net.minecraft.block.*
+import net.minecraft.block.entity.BlockEntity
 import net.minecraft.entity.LivingEntity
+import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.ItemPlacementContext
 import net.minecraft.item.ItemStack
+import net.minecraft.screen.NamedScreenHandlerFactory
 import net.minecraft.state.StateManager
 import net.minecraft.state.property.BooleanProperty
 import net.minecraft.state.property.Properties.FACING
+import net.minecraft.util.ActionResult
 import net.minecraft.util.BlockRotation
+import net.minecraft.util.hit.BlockHitResult
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
 import net.minecraft.util.shape.VoxelShape
 import net.minecraft.world.BlockView
 import net.minecraft.world.World
 import net.minecraft.world.WorldView
+import pebloop.zoocraft.blockEntities.EnclosureControllerBlockEntity
 
-class EnclosureControllerBlock(settings: Settings?) : Block(settings) {
+class EnclosureControllerBlock(settings: Settings?) : BlockWithEntity(settings)  {
+
+    val MAX_SURFACE: Int = 10000
 
     companion object {
         val CONTROLLER_STATUS: BooleanProperty = BooleanProperty.of("controller_status")
+
+        val CODEC: MapCodec<EnclosureControllerBlock> = createCodec(::EnclosureControllerBlock)
     }
 
     override fun getOutlineShape(state: BlockState?, world: BlockView?, pos: BlockPos?, context: ShapeContext?): VoxelShape {
@@ -43,6 +51,10 @@ class EnclosureControllerBlock(settings: Settings?) : Block(settings) {
         }
     }
 
+    override fun getRenderType(state: BlockState?): BlockRenderType {
+        return BlockRenderType.MODEL
+    }
+
     override fun getPlacementState(ctx: ItemPlacementContext?): BlockState? {
         return this.defaultState.with(FACING, ctx?.horizontalPlayerFacing)
     }
@@ -56,86 +68,6 @@ class EnclosureControllerBlock(settings: Settings?) : Block(settings) {
         builder?.add(CONTROLLER_STATUS)
     }
 
-    // search for the enclosure
-    class EnclosureNode(val pos: BlockPos, val parent: EnclosureNode?) {
-        fun contains(pos: BlockPos): Boolean {
-            if (this.pos == pos) {
-                return true
-            }
-            if (parent == null) {
-                return false
-            }
-            return parent.contains(pos)
-        }
-    }
-
-    private fun searchForEnclosure(world: World, pos: BlockPos, nodes: EnclosureNode, target: BlockPos, start: Boolean): EnclosureNode? {
-        if (pos == target) {
-            return nodes
-        }
-        if (nodes.contains(pos)) {
-            return null
-        }
-        if (world.getBlockState(pos).block !is FenceBlock) {
-            return null
-        }
-
-        val northBlock = pos.offset(Direction.NORTH)
-        val eastBlock = pos.offset(Direction.EAST)
-        val southBlock = pos.offset(Direction.SOUTH)
-        val westBlock = pos.offset(Direction.WEST)
-
-        if (!start) {
-            val northNode = searchForEnclosure(world, northBlock, EnclosureNode(pos, nodes), target, false)
-            if (northNode != null) {
-                return northNode
-            }
-        } else if (northBlock != target) {
-            val northNode = searchForEnclosure(world, northBlock, EnclosureNode(pos, nodes), target, false)
-            if (northNode != null) {
-                return northNode
-            }
-        }
-        if (!start) {
-            val eastNode = searchForEnclosure(world, eastBlock, EnclosureNode(pos, nodes), target, false)
-            if (eastNode != null) {
-                return eastNode
-            }
-        } else if (eastBlock != target) {
-            val eastNode = searchForEnclosure(world, eastBlock, EnclosureNode(pos, nodes), target, false)
-            if (eastNode != null) {
-                return eastNode
-            }
-        }
-
-        if (!start) {
-            val southNode = searchForEnclosure(world, southBlock, EnclosureNode(pos, nodes), target, false)
-            if (southNode != null) {
-                return southNode
-            }
-        } else if (southBlock != target) {
-            val southNode = searchForEnclosure(world, southBlock, EnclosureNode(pos, nodes), target, false)
-            if (southNode != null) {
-                return southNode
-            }
-        }
-
-        if (!start) {
-            val westNode = searchForEnclosure(world, westBlock, EnclosureNode(pos, nodes), target, false)
-            if (westNode != null) {
-                return westNode
-            }
-        } else if (westBlock != target) {
-            val westNode = searchForEnclosure(world, westBlock, EnclosureNode(pos, nodes), target, false)
-            if (westNode != null) {
-                return westNode
-            }
-        }
-
-
-        return null
-    }
-
     // this block can only be placed on a closed enclosure
     override fun canPlaceAt(state: BlockState?, world: WorldView?, pos: BlockPos?): Boolean {
 
@@ -147,46 +79,115 @@ class EnclosureControllerBlock(settings: Settings?) : Block(settings) {
             return false
         }
 
+        val otherBlock = supportBlock?.offset(facing)
+        val otherBlockType = world?.getBlockState(otherBlock)?.block
+        if (otherBlockType !is AirBlock) {
+            return false
+        }
+
         return super.canPlaceAt(state, world, pos)
     }
 
-    private fun getEnclosure(world: World, pos: BlockPos): List<BlockPos>? {
-        val northBlock = pos.offset(Direction.NORTH)
-        val eastBlock = pos.offset(Direction.EAST)
-        val southBlock = pos.offset(Direction.SOUTH)
-        val westBlock = pos.offset(Direction.WEST)
+    private fun getEnclosure(world: World, pos: BlockPos): Pair<List<BlockPos>, List<BlockPos>>? {
+        val enclosure = mutableListOf<BlockPos>()
+        val fences = mutableListOf<BlockPos>()
+        val visited = mutableSetOf<BlockPos>()
+        val stack = mutableListOf<BlockPos>()
 
-        val northNode = searchForEnclosure(world, northBlock, EnclosureNode(pos, null), pos, true)
-        val eastNode = searchForEnclosure(world, eastBlock, EnclosureNode(pos, null), pos, true)
-        val southNode = searchForEnclosure(world, southBlock, EnclosureNode(pos, null), pos, true)
-        val westNode = searchForEnclosure(world, westBlock, EnclosureNode(pos, null), pos, true)
-        val enclosureNode = northNode ?: eastNode ?: southNode ?: westNode
-
-        if (enclosureNode != null) {
-            var currentNode = enclosureNode
-            val enclosureList = mutableListOf<BlockPos>()
-            while (currentNode?.parent != null) {
-                currentNode = currentNode.parent!!
-                enclosureList.add(currentNode.pos)
+        stack.add(pos)
+        while (stack.isNotEmpty()) {
+            if (enclosure.size > MAX_SURFACE) {
+                return null
             }
-            return enclosureList
-        } else {
+
+            val current = stack.removeAt(0)
+            if (visited.contains(current)) {
+                continue
+            }
+            visited.add(current)
+            enclosure.add(current)
+
+            val neighbors = mutableListOf<BlockPos>()
+            neighbors.add(current.offset(Direction.NORTH))
+            neighbors.add(current.offset(Direction.EAST))
+            neighbors.add(current.offset(Direction.SOUTH))
+            neighbors.add(current.offset(Direction.WEST))
+
+            for (neighbor in neighbors) {
+                if (visited.contains(neighbor)) {
+                    continue
+                }
+                val block = world.getBlockState(neighbor).block
+                if (block !is FenceBlock) {
+                    stack.add(neighbor)
+                } else {
+                    if (!fences.contains(neighbor)) {
+                        fences.add(neighbor)
+                    }
+                }
+            }
+
+        }
+
+        if (enclosure.size > MAX_SURFACE) {
             return null
         }
+
+        return Pair(enclosure, fences)
     }
 
     override fun onPlaced(world: World?, pos: BlockPos?, state: BlockState?, placer: LivingEntity?, itemStack: ItemStack?) {
         super.onPlaced(world, pos, state, placer, itemStack)
 
         val facing = state?.get(FACING)
-        val supportBlock = pos?.offset(facing)
+        val startBlock = pos?.offset(facing)?.offset(facing)
 
-        val enclosure = getEnclosure(world!!, supportBlock!!)
+        val enclosureData = getEnclosure(world!!, startBlock!!)
+        val enclosure = enclosureData?.first
+        val fences = enclosureData?.second
+
         if (enclosure != null) {
             world.setBlockState(pos, state?.with(CONTROLLER_STATUS, true), 3)
+
+            val entity = world.getBlockEntity(pos)
+            if (entity is EnclosureControllerBlockEntity) {
+                val enclosureControllerEntity = entity as EnclosureControllerBlockEntity
+                enclosureControllerEntity.surface.clear()
+                enclosureControllerEntity.fences.clear()
+                enclosureControllerEntity.surface.addAll(enclosure)
+                if (fences != null) {
+                    enclosureControllerEntity.fences.addAll(fences)
+                }
+            }
+
         } else {
             world.setBlockState(pos, state?.with(CONTROLLER_STATUS, false), 3)
         }
+    }
+
+    override fun createBlockEntity(pos: BlockPos?, state: BlockState?): BlockEntity? {
+        if (pos == null || state == null) {
+            return null
+        }
+        return EnclosureControllerBlockEntity(pos, state)
+    }
+
+    override fun getCodec(): MapCodec<EnclosureControllerBlock> {
+        return CODEC
+    }
+
+    override fun onUse(state: BlockState?, world: World?, pos: BlockPos?, player: PlayerEntity?, hit: BlockHitResult?): ActionResult {
+        if (world != null) {
+            if (world.isClient())
+                return ActionResult.SUCCESS
+
+            val screenHandlerFactory: NamedScreenHandlerFactory? = state?.createScreenHandlerFactory(world, pos)
+            if (screenHandlerFactory != null) {
+                player?.openHandledScreen(screenHandlerFactory)
+                return ActionResult.CONSUME
+            }
+        }
+        return ActionResult.PASS
     }
 
 }
