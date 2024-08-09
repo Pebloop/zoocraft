@@ -10,6 +10,7 @@ import net.minecraft.item.ItemStack
 import net.minecraft.screen.NamedScreenHandlerFactory
 import net.minecraft.state.StateManager
 import net.minecraft.state.property.BooleanProperty
+import net.minecraft.state.property.Properties
 import net.minecraft.state.property.Properties.FACING
 import net.minecraft.util.ActionResult
 import net.minecraft.util.BlockRotation
@@ -21,6 +22,7 @@ import net.minecraft.world.BlockView
 import net.minecraft.world.World
 import net.minecraft.world.WorldView
 import pebloop.zoocraft.blockEntities.EnclosureControllerBlockEntity
+import pebloop.zoocraft.screenHandlers.EnclosureBlockData
 
 class EnclosureControllerBlock(settings: Settings?) : BlockWithEntity(settings)  {
 
@@ -154,7 +156,21 @@ class EnclosureControllerBlock(settings: Settings?) : BlockWithEntity(settings) 
                 val enclosureControllerEntity = entity as EnclosureControllerBlockEntity
                 enclosureControllerEntity.surface.clear()
                 enclosureControllerEntity.fences.clear()
-                enclosureControllerEntity.surface.addAll(enclosure)
+
+                for (block in enclosure) {
+                    var pos = block
+                    while (pos.y > 0) {
+                        pos = pos.down()
+                        val type = world.getBlockState(pos).block
+                        if (type !is AirBlock) {
+                            break
+                        }
+                    }
+
+                    val type = world.getBlockState(pos).block
+
+                    enclosureControllerEntity.surface.add(EnclosureBlockData(pos, type))
+                }
                 if (fences != null) {
                     enclosureControllerEntity.fences.addAll(fences)
                 }
