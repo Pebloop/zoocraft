@@ -1,6 +1,8 @@
 package pebloop.zoocraft.screens
 
 import com.mojang.blaze3d.systems.RenderSystem
+import net.minecraft.block.Block
+import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.gui.screen.ingame.HandledScreen
 import net.minecraft.client.render.GameRenderer
@@ -13,13 +15,6 @@ import pebloop.zoocraft.screenHandlers.EnclosureControllerScreenHandler
 
 
 class EnclosureControllerScreen(handler: EnclosureControllerScreenHandler?, inventory: PlayerInventory?, title: Text?) : HandledScreen<EnclosureControllerScreenHandler>(handler, inventory, title) {
-    var surface: List<EnclosureBlockData> = listOf()
-
-    init {
-        if (handler != null) {
-            surface = handler.data.surface
-        }
-    }
 
     companion object {
         private val bgWidth = 300
@@ -38,11 +33,22 @@ class EnclosureControllerScreen(handler: EnclosureControllerScreenHandler?, inve
     override fun drawForeground(context: DrawContext?, mouseX: Int, mouseY: Int) {
         val x = (width - bgWidth) / 2
         val y = (height - bgHeight) / 2
-        context?.drawText(textRenderer, "Surface: " + surface.size.toString(), x + 10, y + 10, 0xFFFFFF , false)
+        context?.drawText(textRenderer, "Surface: " + handler.data.surface.size.toString(), x + 10, y + 10, 0xFFFFFF , false)
+        val blocksk = mutableMapOf<Block, Int>()
 
-        for (i in 0 until surface.size) {
-            val block = surface[i]
-            context?.drawText(textRenderer, block.block.toString(), x + 10, y + 20 + i * 10, 0xFFFFFF , false)
+        for (i in 0 until handler.data.surface.size) {
+            val block = handler.data.surface[i]
+            if (blocksk.containsKey(block.block)) {
+                blocksk[block.block] = blocksk[block.block]!! + 1
+            } else {
+                blocksk[block.block] = 1
+            }
+        }
+        var i = 0
+        for ((key, value) in blocksk) {
+            val text = key.name.append(": ").append(value.toString())
+            context?.drawText(textRenderer, text, x + 10, y + 20 + i * 10, 0xFFFFFF, false)
+            i++
         }
     }
 

@@ -10,7 +10,6 @@ import net.minecraft.item.ItemStack
 import net.minecraft.screen.NamedScreenHandlerFactory
 import net.minecraft.state.StateManager
 import net.minecraft.state.property.BooleanProperty
-import net.minecraft.state.property.Properties
 import net.minecraft.state.property.Properties.FACING
 import net.minecraft.util.ActionResult
 import net.minecraft.util.BlockRotation
@@ -21,6 +20,7 @@ import net.minecraft.util.shape.VoxelShape
 import net.minecraft.world.BlockView
 import net.minecraft.world.World
 import net.minecraft.world.WorldView
+import pebloop.zoocraft.WorldExtended
 import pebloop.zoocraft.blockEntities.EnclosureControllerBlockEntity
 import pebloop.zoocraft.screenHandlers.EnclosureBlockData
 
@@ -82,7 +82,7 @@ class EnclosureControllerBlock(settings: Settings?) : BlockWithEntity(settings) 
         }
 
         val otherBlock = supportBlock?.offset(facing)
-        val otherBlockType = world?.getBlockState(otherBlock)?.block
+        val otherBlockType = world.getBlockState(otherBlock)?.block
         if (otherBlockType !is AirBlock) {
             return false
         }
@@ -90,6 +90,7 @@ class EnclosureControllerBlock(settings: Settings?) : BlockWithEntity(settings) 
         return super.canPlaceAt(state, world, pos)
     }
 
+    /// This function compute the enclosure and fences of the enclosure
     private fun getEnclosure(world: World, pos: BlockPos): Pair<List<BlockPos>, List<BlockPos>>? {
         val enclosure = mutableListOf<BlockPos>()
         val fences = mutableListOf<BlockPos>()
@@ -138,49 +139,6 @@ class EnclosureControllerBlock(settings: Settings?) : BlockWithEntity(settings) 
         return Pair(enclosure, fences)
     }
 
-    override fun onPlaced(world: World?, pos: BlockPos?, state: BlockState?, placer: LivingEntity?, itemStack: ItemStack?) {
-        super.onPlaced(world, pos, state, placer, itemStack)
-
-        val facing = state?.get(FACING)
-        val startBlock = pos?.offset(facing)?.offset(facing)
-
-        val enclosureData = getEnclosure(world!!, startBlock!!)
-        val enclosure = enclosureData?.first
-        val fences = enclosureData?.second
-
-        if (enclosure != null) {
-            world.setBlockState(pos, state?.with(CONTROLLER_STATUS, true), 3)
-
-            val entity = world.getBlockEntity(pos)
-            if (entity is EnclosureControllerBlockEntity) {
-                val enclosureControllerEntity = entity as EnclosureControllerBlockEntity
-                enclosureControllerEntity.surface.clear()
-                enclosureControllerEntity.fences.clear()
-
-                for (block in enclosure) {
-                    var pos = block
-                    while (pos.y > 0) {
-                        pos = pos.down()
-                        val type = world.getBlockState(pos).block
-                        if (type !is AirBlock) {
-                            break
-                        }
-                    }
-
-                    val type = world.getBlockState(pos).block
-
-                    enclosureControllerEntity.surface.add(EnclosureBlockData(pos, type))
-                }
-                if (fences != null) {
-                    enclosureControllerEntity.fences.addAll(fences)
-                }
-            }
-
-        } else {
-            world.setBlockState(pos, state?.with(CONTROLLER_STATUS, false), 3)
-        }
-    }
-
     override fun createBlockEntity(pos: BlockPos?, state: BlockState?): BlockEntity? {
         if (pos == null || state == null) {
             return null
@@ -199,11 +157,92 @@ class EnclosureControllerBlock(settings: Settings?) : BlockWithEntity(settings) 
 
             val screenHandlerFactory: NamedScreenHandlerFactory? = state?.createScreenHandlerFactory(world, pos)
             if (screenHandlerFactory != null) {
+                world.updateListeners(pos, state, state, Block.NOTIFY_LISTENERS)
+                val entity = world.getBlockEntity(pos) as EnclosureControllerBlockEntity
+                println(entity.surface.size)
                 player?.openHandledScreen(screenHandlerFactory)
                 return ActionResult.CONSUME
             }
         }
         return ActionResult.PASS
+    }
+
+    override fun onStateReplaced(state: BlockState?, world: World?, pos: BlockPos?, newState: BlockState?, moved: Boolean) {
+        if (state == null || world == null || pos == null || newState == null) {
+            super.onStateReplaced(state, world, pos, newState, moved)
+            return
+        }
+        if (newState.block != ZoocraftBlocks.ENCLOSURE_CONTROLLER) {
+            val entity = world.getBlockEntity(pos)
+            if (entity is EnclosureControllerBlockEntity) {
+                val worldExtended = world as WorldExtended
+                val controllers = worldExtended.`zoocraft$getEnclosureControllers`()
+                val controllerToRemove = controllers.indexOf(entity.pos)
+                if (controllerToRemove != -1) {
+                    controllers.removeAt(controllerToRemove)
+                }
+                worldExtended.`zoocraft$setEnclosureControllers`(controllers)
+            }
+            entity?.markDirty()
+        }
+        super.onStateReplaced(state, world, pos, newState, moved)
+    }
+
+    override fun onBlockAdded(state: BlockState?, world: World?, pos: BlockPos?, oldState: BlockState?, notify: Boolean) {
+        super.onBlockAdded(state, world, pos, oldState, notify)
+
+        val entity = world?.getBlockEntity(pos)
+
+        val facing = state?.get(FACING)
+        val startBlock = pos?.offset(facing)?.offset(facing)
+
+        val enclosureData = getEnclosure(world!!, startBlock!!)
+        val enclosure = enclosureData?.first
+        val fences = enclosureData?.second
+
+        if (enclosure != null) {
+            world.setBlockState(pos, state?.with(CONTROLLER_STATUS, true), 3)
+
+            if (entity is EnclosureControllerBlockEntity) {
+                val enclosureControllerEntity = entity as EnclosureControllerBlockEntity
+                enclosureControllerEntity.surface.clear()
+                enclosureControllerEntity.fences.clear()
+
+                for (block in enclosure) {
+                    var pos = block
+                    while (pos.y > 0) {
+                        pos = pos.down()
+                        val type = world.getBlockState(pos).block
+                        if (type !is AirBlock) {
+                            break
+                        }
+                    }
+
+                    val type = world.getBlockState(pos).block
+
+                    enclosureControllerEntity.surface.add(EnclosureBlockData(pos, type))
+                    entity.markDirty()
+                }
+                if (fences != null) {
+                    enclosureControllerEntity.fences.addAll(fences)
+                }
+            }
+
+        } else {
+            world.setBlockState(pos, state?.with(CONTROLLER_STATUS, false), 3)
+        }
+
+        val worldExtended = world as WorldExtended
+        val controllers = worldExtended.`zoocraft$getEnclosureControllers`()
+        if (entity != null) {
+            if (controllers.contains(entity.pos)) {
+                return
+            }
+        }
+        if (entity != null) {
+            controllers.add(entity.pos)
+        }
+        worldExtended.`zoocraft$setEnclosureControllers`(controllers)
     }
 
 }
