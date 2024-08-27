@@ -1,13 +1,11 @@
 package pebloop.zoocraft.blockEntities
 
-import net.minecraft.block.AbstractBlock
 import net.minecraft.block.Block
 import net.minecraft.block.entity.BlockEntityType
 import net.minecraft.block.entity.BlockEntityType.BlockEntityFactory
 import net.minecraft.registry.Registries
 import net.minecraft.registry.Registry
 import net.minecraft.util.Identifier
-import pebloop.zoocraft.blocks.EnclosureControllerBlock
 import pebloop.zoocraft.blocks.ZoocraftBlocks
 
 class ZoocraftBlockEntities {
@@ -19,7 +17,7 @@ class ZoocraftBlockEntities {
         }
 
         var ENCLOSURE_CONTROLLER_BLOCK_ENTITY = register("enclosure_controller_entity", ::EnclosureControllerBlockEntity, ZoocraftBlocks.ENCLOSURE_CONTROLLER)
-
+        val RABBIT_TRAP_BLOCK_ENTITY = register("rabbit_trap_entity", ::RabbitTrapBlockEntity, ZoocraftBlocks.RABBIT_TRAP_BLOCK)
         fun init() {
 
         }

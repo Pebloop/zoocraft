@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "rabbit_trap_status=empty": {
+      "model": "zoocraft:block/rabbit_trap/rabbit_trap"
+    },
+    "rabbit_trap_status=baited": {
+      "model": "zoocraft:block/rabbit_trap/rabbit_trap_carrot"
+    },
+    "rabbit_trap_status=trapped": {
+      "model": "zoocraft:block/rabbit_trap/rabbit_trap_down"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 {
   "parent": "item/generated",
   "textures": {
-    "layer0": "zoocraft:item/enclosure_controller"
+    "layer0": "zoocraft:item/zoodex"
   }
 }

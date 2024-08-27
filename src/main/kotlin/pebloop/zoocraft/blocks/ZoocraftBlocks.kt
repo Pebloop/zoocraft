@@ -23,10 +23,12 @@ class ZoocraftBlocks {
         }
 
         var ENCLOSURE_CONTROLLER = register(EnclosureControllerBlock(Settings.create()), "enclosure_controller")
+        val RABBIT_TRAP_BLOCK = register(RabbitTrapBlock(Settings.create()), "rabbit_trap")
 
         fun init() {
             ItemGroupEvents.modifyEntriesEvent(ItemGroups.FUNCTIONAL).register { group ->
                 group.add(ENCLOSURE_CONTROLLER.asItem())
+                group.add(RABBIT_TRAP_BLOCK.asItem())
             }
         }
     }

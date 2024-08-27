@@ -1,7 +1,6 @@
-package pebloop.zoocraft.screenHandlers
+package pebloop.zoocraft.screenHandlers.enclosureController
 
 import io.netty.buffer.ByteBuf
-import net.minecraft.block.Block
 import net.minecraft.block.Blocks
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.entity.player.PlayerInventory
@@ -10,11 +9,8 @@ import net.minecraft.network.PacketByteBuf
 import net.minecraft.network.codec.PacketCodec
 import net.minecraft.network.codec.PacketCodecs
 import net.minecraft.registry.Registries
-import net.minecraft.registry.RegistryKey
-import net.minecraft.registry.RegistryKeys
 import net.minecraft.screen.ScreenHandler
-import net.minecraft.util.Identifier
-import net.minecraft.util.math.BlockPos
+import pebloop.zoocraft.screenHandlers.ZoocraftScreenHandler
 
 class EnclosureControllerScreenHandler(sincId: Int, inventory: PlayerInventory?, data: EnclosureControllerData) : ScreenHandler(ZoocraftScreenHandler.ENCLOSURE_CONTROLLER_SCREEN_HANDLER, sincId) {
     val data = data
@@ -22,14 +18,24 @@ class EnclosureControllerScreenHandler(sincId: Int, inventory: PlayerInventory?,
 
         val PACKET_CODEC: PacketCodec<ByteBuf, EnclosureControllerData> = PacketCodec.of(
                 { value, buf ->
+                    // write surface
                     PacketCodecs.writeCollectionSize(buf, value.surface.size, 0x7FFFFFFF)
                     for (i in 0 until value.surface.size) {
                         val block = value.surface[i]
                         PacketByteBuf(buf).writeBlockPos(block.pos)
                         PacketByteBuf(buf).writeIdentifier(block.block.registryEntry.registryKey().value)
                     }
+
+                    // write entities
+                    PacketCodecs.writeCollectionSize(buf, value.entities.size, 0x7FFFFFFF)
+                    for (i in 0 until value.entities.size) {
+                        val entity = value.entities[i]
+                        PacketByteBuf(buf).writeString(entity.typeName)
+                    }
                 },
                 { buf ->
+
+                    // read surface
                     val size = PacketCodecs.readCollectionSize(buf, 0x7FFFFFFF)
                     val list = ArrayList<EnclosureBlockData>()
                     for (i in 0 until size) {
@@ -38,7 +44,16 @@ class EnclosureControllerScreenHandler(sincId: Int, inventory: PlayerInventory?,
                         val block = Registries.BLOCK.get(id) ?: Blocks.AIR
                         list.add(EnclosureBlockData(pos, block))
                     }
-                    EnclosureControllerData(list)
+
+                    // read entities
+                    val entitySize = PacketCodecs.readCollectionSize(buf, 0x7FFFFFFF)
+                    val entityList = ArrayList<EnclosureEntityData>()
+                    for (i in 0 until entitySize) {
+                        val typeName = PacketByteBuf(buf).readString()
+                        entityList.add(EnclosureEntityData(typeName))
+                    }
+
+                    EnclosureControllerData(list, entityList)
                 }
 
         )

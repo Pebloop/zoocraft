@@ -12,11 +12,14 @@ base {
 }
 
 repositories {
-	// Add repositories to retrieve artifacts from in here.
-	// You should only use this when depending on other mods because
-	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
-	// for more information about repositories.
+	maven { url 'https://maven.wispforest.io/releases/' }
+	maven {
+		name = 'GeckoLib'
+		url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+		content {
+			includeGroup("software.bernie.geckolib")
+		}
+	}
 }
 
 loom {
@@ -44,6 +47,11 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 	modImplementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
+
+	modImplementation "io.wispforest:owo-lib:${project.owo_version}"
+	include "io.wispforest:owo-sentinel:${project.owo_version}"
+	annotationProcessor modImplementation("io.wispforest:owo-lib:${project.owo_version}")
+	modImplementation "software.bernie.geckolib:geckolib-fabric-${minecraft_version}:${geckolib_version}"
 }
 
 processResources {
@@ -96,4 +104,8 @@ publishing {
 		// The repositories here will be used for publishing your artifact, not for
 		// retrieving dependencies.
 	}
+
+	sourceSets.main.java.srcDirs += [ 'src/main/generatedJava/pebloop' ]
+	compileJava.options.generatedSourceOutputDirectory = file("${projectDir}/src/main/generatedJava/pebloop/zoocraft/")
+
 }

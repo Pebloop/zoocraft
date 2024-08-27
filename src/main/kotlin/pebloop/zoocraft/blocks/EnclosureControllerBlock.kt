@@ -3,10 +3,8 @@ package pebloop.zoocraft.blocks
 import com.mojang.serialization.MapCodec
 import net.minecraft.block.*
 import net.minecraft.block.entity.BlockEntity
-import net.minecraft.entity.LivingEntity
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.item.ItemPlacementContext
-import net.minecraft.item.ItemStack
 import net.minecraft.screen.NamedScreenHandlerFactory
 import net.minecraft.state.StateManager
 import net.minecraft.state.property.BooleanProperty
@@ -20,9 +18,9 @@ import net.minecraft.util.shape.VoxelShape
 import net.minecraft.world.BlockView
 import net.minecraft.world.World
 import net.minecraft.world.WorldView
-import pebloop.zoocraft.WorldExtended
+import pebloop.zoocraft.ducks.WorldExtended
 import pebloop.zoocraft.blockEntities.EnclosureControllerBlockEntity
-import pebloop.zoocraft.screenHandlers.EnclosureBlockData
+import pebloop.zoocraft.screenHandlers.enclosureController.EnclosureBlockData
 
 class EnclosureControllerBlock(settings: Settings?) : BlockWithEntity(settings)  {
 
@@ -30,6 +28,7 @@ class EnclosureControllerBlock(settings: Settings?) : BlockWithEntity(settings) 
 
     companion object {
         val CONTROLLER_STATUS: BooleanProperty = BooleanProperty.of("controller_status")
+
 
         val CODEC: MapCodec<EnclosureControllerBlock> = createCodec(::EnclosureControllerBlock)
     }
@@ -121,7 +120,7 @@ class EnclosureControllerBlock(settings: Settings?) : BlockWithEntity(settings) 
                     continue
                 }
                 val block = world.getBlockState(neighbor).block
-                if (block !is FenceBlock) {
+                if (block !is FenceBlock && block !is FenceGateBlock) {
                     stack.add(neighbor)
                 } else {
                     if (!fences.contains(neighbor)) {

@@ -1,11 +1,10 @@
 package pebloop.zoocraft.blockEntities
 
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory
-import net.minecraft.block.AirBlock
-import net.minecraft.block.Block
 import net.minecraft.block.BlockState
-import net.minecraft.block.Blocks
 import net.minecraft.block.entity.BlockEntity
+import net.minecraft.entity.Entity
+import net.minecraft.entity.LivingEntity
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.entity.player.PlayerInventory
 import net.minecraft.nbt.NbtCompound
@@ -18,19 +17,26 @@ import net.minecraft.screen.ScreenHandler
 import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.text.Text
 import net.minecraft.util.Identifier
+import net.minecraft.util.TypeFilter
 import net.minecraft.util.math.BlockPos
-import pebloop.zoocraft.WorldExtended
+import net.minecraft.util.math.Box
 import pebloop.zoocraft.blockEntities.ZoocraftBlockEntities.Companion.ENCLOSURE_CONTROLLER_BLOCK_ENTITY
-import pebloop.zoocraft.screenHandlers.EnclosureBlockData
-import pebloop.zoocraft.screenHandlers.EnclosureControllerData
-import pebloop.zoocraft.screenHandlers.EnclosureControllerScreenHandler
+import pebloop.zoocraft.screenHandlers.enclosureController.EnclosureBlockData
+import pebloop.zoocraft.screenHandlers.enclosureController.EnclosureControllerData
+import pebloop.zoocraft.screenHandlers.enclosureController.EnclosureControllerScreenHandler
+import pebloop.zoocraft.screenHandlers.enclosureController.EnclosureEntityData
+import java.util.UUID
 
 class EnclosureControllerBlockEntity(blockPos: BlockPos, blockState: BlockState) : BlockEntity(ENCLOSURE_CONTROLLER_BLOCK_ENTITY, blockPos, blockState), ExtendedScreenHandlerFactory<EnclosureControllerData> {
     var surface = mutableListOf<EnclosureBlockData>()
     var fences = mutableListOf<BlockPos>()
+    var entities = mutableListOf<UUID>()
+    private var box: Box = Box(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     override fun writeNbt(nbt: NbtCompound?, registryLookup: RegistryWrapper.WrapperLookup?) {
         super.writeNbt(nbt, registryLookup)
+
+        // register surface
         val surfaceX = mutableListOf<Int>()
         val surfaceY = mutableListOf<Int>()
         val surfaceZ = mutableListOf<Int>()
@@ -60,6 +66,8 @@ class EnclosureControllerBlockEntity(blockPos: BlockPos, blockState: BlockState)
             nbt?.putByteArray("surface_identifier", byteArrayOf())
         }
 
+
+        // register fences
         val fencesX = mutableListOf<Int>()
         val fencesY = mutableListOf<Int>()
         val fencesZ = mutableListOf<Int>()
@@ -73,6 +81,12 @@ class EnclosureControllerBlockEntity(blockPos: BlockPos, blockState: BlockState)
         nbt?.putIntArray("fences_x", fencesX.toIntArray())
         nbt?.putIntArray("fences_y", fencesY.toIntArray())
         nbt?.putIntArray("fences_z", fencesZ.toIntArray())
+
+        // register entities
+        nbt?.putInt("entities_size", entities.size)
+        for (i in 0 until entities.size) {
+            nbt?.putUuid("entities_uuid_$i", entities[i])
+        }
 
     }
 
@@ -104,11 +118,40 @@ class EnclosureControllerBlockEntity(blockPos: BlockPos, blockState: BlockState)
                 fences.add(BlockPos(fencesX[i], fencesY[i], fencesZ[i]))
             }
 
+            // compute bounding box
+            computeBoundingBox()
+
+            // read entities
+            val entitiesSize = nbt.getInt("entities_size")
+            entities.clear()
+            for (i in 0 until entitiesSize) {
+                entities.add(nbt.getUuid("entities_uuid_$i"))
+            }
+
         }
     }
 
     override fun createMenu(syncId: Int, playerInventory: PlayerInventory?, player: PlayerEntity?): ScreenHandler {
-        return EnclosureControllerScreenHandler(syncId, playerInventory, EnclosureControllerData(surface))
+        var entitiesData: ArrayList<EnclosureEntityData> = ArrayList()
+
+        if (world != null) {
+
+            val ents = world!!.getEntitiesByType(TypeFilter.instanceOf(LivingEntity::class.java), box) {
+                if (entities.contains<UUID>(it.uuid)) {
+                    return@getEntitiesByType true
+                }
+                return@getEntitiesByType false
+            }
+
+            for (ent in ents) {
+
+                if (ent != null) {
+                    val entityData = EnclosureEntityData(ent.type.name.string)
+                    entitiesData.add(entityData)
+                }
+            }
+        }
+        return EnclosureControllerScreenHandler(syncId, playerInventory, EnclosureControllerData(surface, entitiesData))
     }
 
     override fun getDisplayName(): Text {
@@ -117,7 +160,23 @@ class EnclosureControllerBlockEntity(blockPos: BlockPos, blockState: BlockState)
 
     override fun getScreenOpeningData(player: ServerPlayerEntity?): EnclosureControllerData {
 
-        return EnclosureControllerData(surface)
+        val entitiesData: ArrayList<EnclosureEntityData> = ArrayList()
+        if (world != null) {
+
+            val ents = world!!.getEntitiesByType(TypeFilter.instanceOf(LivingEntity::class.java), box) {
+                if (entities.contains<UUID>(it.uuid)) {
+                    return@getEntitiesByType true
+                }
+                return@getEntitiesByType false
+            }
+
+            for (entity in ents) {
+                val entityData = EnclosureEntityData(entity.type.name.string)
+                entitiesData.add(entityData)
+            }
+        }
+
+        return EnclosureControllerData(surface, entitiesData)
     }
 
 
@@ -127,6 +186,12 @@ class EnclosureControllerBlockEntity(blockPos: BlockPos, blockState: BlockState)
 
     override fun toInitialChunkDataNbt(registryLookup: RegistryWrapper.WrapperLookup?): NbtCompound {
         return createNbt(registryLookup)
+    }
+
+    fun computeBoundingBox() {
+        val min = BlockPos(fences.minOf { it.x }, fences.minOf { it.y }, fences.minOf { it.z })
+        val max = BlockPos(fences.maxOf { it.x }, fences.maxOf { it.y }, fences.maxOf { it.z })
+        box = Box(min.x.toDouble(), min.y.toDouble() - 10, min.z.toDouble(), max.x + 1.0, max.y + 11.0, max.z + 1.0)
     }
 
     /// This function is called when a block is placed or removed to update the enclosure status in the controller
@@ -143,5 +208,20 @@ class EnclosureControllerBlockEntity(blockPos: BlockPos, blockState: BlockState)
                 markDirty()
             }
         }
+    }
+
+    fun isInside(pos: BlockPos): Boolean {
+        computeBoundingBox()
+        return box.contains(pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble())
+    }
+
+    fun addAnimal(entity: Entity) {
+        entities.add(entity.uuid)
+        markDirty()
+    }
+
+    fun removeAnimal(entity: Entity) {
+        entities.remove(entity.uuid)
+        markDirty()
     }
 }

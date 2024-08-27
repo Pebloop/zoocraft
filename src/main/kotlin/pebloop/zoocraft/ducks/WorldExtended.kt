@@ -1,4 +1,4 @@
-package pebloop.zoocraft
+package pebloop.zoocraft.ducks
 
 import net.minecraft.util.math.BlockPos
 
