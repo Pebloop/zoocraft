@@ -6,6 +6,7 @@ import net.minecraft.registry.Registry
 import pebloop.zoocraft.screenHandlers.enclosureController.EnclosureControllerData
 import pebloop.zoocraft.screenHandlers.enclosureController.EnclosureControllerScreenHandler
 import pebloop.zoocraft.screenHandlers.zoodex.ZoodexData
+import pebloop.zoocraft.screenHandlers.zoodex.ZoodexEntityScreenData
 import pebloop.zoocraft.screenHandlers.zoodex.ZoodexEntityScreenHandler
 import pebloop.zoocraft.screenHandlers.zoodex.ZoodexScreenHandler
 import java.util.*
@@ -16,7 +17,7 @@ class ZoocraftScreenHandler {
         val ENCLOSURE_CONTROLLER_SCREEN_HANDLER = ExtendedScreenHandlerType<EnclosureControllerScreenHandler, EnclosureControllerData>(::EnclosureControllerScreenHandler, EnclosureControllerScreenHandler.PACKET_CODEC)
         val SET_NAME_SCREEN_HANDLER = ExtendedScreenHandlerType<SetNameScreenHandler, UUID>(::SetNameScreenHandler, SetNameScreenHandler.PACKET_CODEC)
         val ZOODEX_SCREEN_HANDLER = ExtendedScreenHandlerType<ZoodexScreenHandler, ZoodexData>(::ZoodexScreenHandler, ZoodexScreenHandler.PACKET_CODEC)
-        val ZOODEX_ENTITY_SCREEN_HANDLER = ExtendedScreenHandlerType<ZoodexEntityScreenHandler, UUID>(::ZoodexEntityScreenHandler, ZoodexEntityScreenHandler.PACKET_CODEC)
+        val ZOODEX_ENTITY_SCREEN_HANDLER = ExtendedScreenHandlerType<ZoodexEntityScreenHandler, ZoodexEntityScreenData>(::ZoodexEntityScreenHandler, ZoodexEntityScreenHandler.PACKET_CODEC)
 
         fun init() {
             Registry.register(Registries.SCREEN_HANDLER, "zoocraft:enclosure_controller", ENCLOSURE_CONTROLLER_SCREEN_HANDLER)

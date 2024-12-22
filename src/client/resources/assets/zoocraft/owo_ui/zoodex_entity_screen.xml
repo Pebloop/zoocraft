@@ -17,6 +17,43 @@
                                 </flow-layout>
                             </children>
                         </flow-layout>
+                        <flow-layout direction="vertical">
+                            <children>
+                                <label>
+                                    <text>Health</text>
+                                    <color>black</color>
+                                </label>
+                                <box id="health">
+                                    <sizing>
+                                        <horizontal method="fixed">50</horizontal>
+                                        <vertical method="fixed">10</vertical>
+                                    </sizing>
+                                    <color>red</color>
+                                </box>
+                                <label>
+                                    <text>Hunger</text>
+                                    <color>black</color>
+                                </label>
+                                <box id="hunger">
+                                    <sizing>
+                                        <horizontal method="fixed">50</horizontal>
+                                        <vertical method="fixed">10</vertical>
+                                    </sizing>
+                                    <color>yellow</color>
+                                </box>
+                                <label>
+                                    <text>Environment</text>
+                                    <color>black</color>
+                                </label>
+                                <box id="needs">
+                                    <sizing>
+                                        <horizontal method="fixed">0</horizontal>
+                                        <vertical method="fixed">10</vertical>
+                                    </sizing>
+                                    <color>blue</color>
+                                </box>
+                            </children>
+                        </flow-layout>
                     </children>
                     <surface>
                         <panel/>

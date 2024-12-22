@@ -6,21 +6,24 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
 import net.minecraft.server.MinecraftServer
 import net.minecraft.util.Identifier
 import org.slf4j.LoggerFactory
+import pebloop.zoocraft.ZoocraftConfig
 import pebloop.zoocraft.blockEntities.ZoocraftBlockEntities
 import pebloop.zoocraft.blocks.ZoocraftBlocks
 import pebloop.zoocraft.ducks.WorldExtended
-import pebloop.zoocraft.screenHandlers.ZoocraftScreenHandler
-import pebloop.zoocraft.ZoocraftConfig
 import pebloop.zoocraft.items.ZoocraftItems
 import pebloop.zoocraft.packets.ZoocraftPackets
+import pebloop.zoocraft.screenHandlers.ZoocraftScreenHandler
 
 object Zoocraft : ModInitializer {
 
+	// static
+	val CONFIG: ZoocraftConfig = ZoocraftConfig.createAndLoad()
+
+
+	val DATA: ZoocraftData = ZoocraftData()
 	final val channel = OwoNetChannel.create(Identifier.of("zoocraft", "main"))
     private val logger = LoggerFactory.getLogger("zoocraft")
 	const val MOD_ID = "zoocraft"
-	val CONFIG: ZoocraftConfig = ZoocraftConfig.createAndLoad()
-	val DATA: ZoocraftData = ZoocraftData()
 
 	override fun onInitialize() {
 		ZoocraftScreenHandler.init()

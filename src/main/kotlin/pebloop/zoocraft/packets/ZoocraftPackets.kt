@@ -10,6 +10,7 @@ import net.minecraft.util.math.Box
 import net.minecraft.world.StructureSpawns.BoundingBox
 import pebloop.zoocraft.Zoocraft
 import pebloop.zoocraft.screenHandlers.SetNameScreenHandler
+import pebloop.zoocraft.screenHandlers.zoodex.ZoodexEntityScreenHandler
 
 class ZoocraftPackets {
 
@@ -17,6 +18,8 @@ class ZoocraftPackets {
 
 
         fun init() {
+
+            // SetNamePacket
             Zoocraft.channel.registerServerbound(SetNamePacket::class.java) { setNamePacket: SetNamePacket, serverAccess: ServerAccess ->
                 val handler = serverAccess.player.currentScreenHandler
                 if (handler is SetNameScreenHandler) {
@@ -33,7 +36,6 @@ class ZoocraftPackets {
                     serverAccess.player.closeHandledScreen()
                 }
             }
-
         }
     }
 }

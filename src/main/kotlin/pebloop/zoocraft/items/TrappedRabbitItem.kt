@@ -44,6 +44,9 @@ class TrappedRabbitItem(settings: Settings) : Item(settings) {
         val controllers = extendedWorld.`zoocraft$getEnclosureControllers`()
 
         for (controllerPos in controllers) {
+            val extendedEntity = rabbit as pebloop.zoocraft.ducks.LivingEntityExtended
+            extendedEntity.`zoocraft$setCaught`(true);
+
             val entity = world.getBlockEntity(controllerPos)
             val controller = entity as? pebloop.zoocraft.blockEntities.EnclosureControllerBlockEntity ?: continue
             println(controller.isInside(pos))

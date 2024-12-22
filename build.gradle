@@ -105,7 +105,7 @@ publishing {
 		// retrieving dependencies.
 	}
 
-	sourceSets.main.java.srcDirs += [ 'src/main/generatedJava/pebloop' ]
+	sourceSets.main.java.srcDirs += [ 'src/main/generatedJava' ]
 	compileJava.options.generatedSourceOutputDirectory = file("${projectDir}/src/main/generatedJava/pebloop/zoocraft/")
 
 }

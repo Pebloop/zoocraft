@@ -16,7 +16,7 @@ class ZoodexEntityScreen(handler: ZoodexEntityScreenHandler?, inventory: PlayerI
 
     override fun init() {
         super.init()
-        client?.setScreen(ZoodexEntityOwoScreen())
+        client?.setScreen(ZoodexEntityOwoScreen(handler))
     }
 
     override fun drawBackground(context: DrawContext?, delta: Float, mouseX: Int, mouseY: Int) {

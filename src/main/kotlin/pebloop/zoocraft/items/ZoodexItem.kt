@@ -17,9 +17,12 @@ import net.minecraft.util.TypedActionResult
 import net.minecraft.util.UseAction
 import net.minecraft.world.World
 import pebloop.zoocraft.blockEntities.EnclosureControllerBlockEntity
+import pebloop.zoocraft.ducks.WorldExtended
 import pebloop.zoocraft.screenHandlers.SetNameScreenHandler
 import pebloop.zoocraft.screenHandlers.SimpleExtendedScreenHandlerFactory
+import pebloop.zoocraft.screenHandlers.enclosureController.EnclosureEntityData
 import pebloop.zoocraft.screenHandlers.zoodex.ZoodexData
+import pebloop.zoocraft.screenHandlers.zoodex.ZoodexEntityScreenData
 import pebloop.zoocraft.screenHandlers.zoodex.ZoodexEntityScreenHandler
 import pebloop.zoocraft.screenHandlers.zoodex.ZoodexScreenHandler
 import java.util.*
@@ -38,7 +41,13 @@ class ZoodexItem(settings: Settings) : Item(settings) {
 
     override fun useOnEntity(stack: ItemStack?, user: PlayerEntity?, entity: LivingEntity?, hand: Hand?): ActionResult {
         if (entity != null) {
-            user?.openHandledScreen(SimpleExtendedScreenHandlerFactory<UUID>({ syncId, inv, player -> ZoodexEntityScreenHandler(syncId, inv, entity.uuid) }, entity.uuid))
+            val world = entity.world
+            val worldExtended = entity.world as WorldExtended
+            val controllersPos = worldExtended.`zoocraft$getEnclosureControllers`()
+            val controllers = controllersPos.map { world.getBlockEntity(it) }.filterIsInstance<EnclosureControllerBlockEntity>()
+            val controller = controllers.firstOrNull { it.entities.contains(entity.uuid) }
+
+            user?.openHandledScreen(SimpleExtendedScreenHandlerFactory<ZoodexEntityScreenData>({ syncId, inv, player -> ZoodexEntityScreenHandler(syncId, inv, ZoodexEntityScreenData(entity.uuid, controller?.pos)) }, ZoodexEntityScreenData(entity.uuid, controller?.pos)))
         }
         return super.useOnEntity(stack, user, entity, hand)
     }
