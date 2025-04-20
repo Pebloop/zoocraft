@@ -1,10 +1,9 @@
 package pebloop.zoocraft
 
 import net.fabricmc.api.ClientModInitializer
-import pebloop.zoocraft.screens.ZoocraftScreens
 
 object ZoocraftClient : ClientModInitializer {
 	override fun onInitializeClient() {
-		ZoocraftScreens.init()
+		// This entrypoint is suitable for setting up client-specific logic, such as rendering.
 	}
 }
