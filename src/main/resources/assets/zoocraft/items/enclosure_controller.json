@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "zoocraft:block/enclosure_controller"
+  }
+}
